@@ -5,31 +5,59 @@
 
 import Control.Monad
 
--- AST and Type Definitions
+-- Definitions for types
 data TYPELANG = TNum
               | TBool
+              | TYPELANG :->: TYPELANG --type for functions
                 deriving (Show,Eq)
 
+-- AST and Type Definitions
 data TERMLANG = Num  Int 
-	          | Boolean Bool -- True False
-              | Id String 
-              | Plus TERMLANG TERMLANG 
-              | Minus TERMLANG TERMLANG
-              | Mult TERMLANG TERMLANG
-              | Div TERMLANG TERMLANG
-	          | Lambda String TERMLANG TERMLANG
-	          | App TERMLANG TERMLANG TERMLANG
-              | Bind String TERMLANG TERMLANG
-              | If TERMLANG TERMLANG TERMLANG
+	            | Boolean Bool -- True False
               | And TERMLANG TERMLANG
               | Or TERMLANG TERMLANG
               | Leq TERMLANG TERMLANG
               | IsZero TERMLANG 
-               deriving (Show,Eq)
+              | If TERMLANG TERMLANG TERMLANG
+              | Lambda String TYPELANG TERMLANG
+              | App TERMLANG TERMLANG
+              | Bind String TERMLANG TERMLANG
+              | Id String 
+              | Plus TERMLANG TERMLANG
+              | Minus TERMLANG TERMLANG
+              | Mult TERMLANG TERMLANG
+              | Div TERMLANG TERMLANG
+                deriving (Show,Eq)
 
+-- Environment for eval
+type Env = [(String,TERMLANG)]
+-- Environment for typeof
+type Cont = [(String,TYPELANG)]
 
---type Env = [(String,TERMLANG)]
---type Cont = [(String,TYPELANG)]
+eval :: Env -> TERMLANG -> (Maybe TERMLANG)
+eval e (Num x) = if x < 0 then Nothing else return (Num x)
+eval e (Plus l r) = do {
+  (Num l') <- eval e l;
+  (Num r') <- eval e r;
+  return (Num (l' + r'))
+}
+eval e (Minus l r) = do {
+  (Num l') <- eval e l;
+  (Num r') <- eval e r;
+  if (l' - r') < 0 then Nothing else return (Num (l' + r'))
+}
+eval e (Mult l r) = do {
+  (Num l') <- eval e l;
+  (Num r') <- eval e r;
+  return (Num (l' * r'))
+}
+eval e (Div l r) = do {
+  (Num l') <- eval e l;
+  (Num r') <- eval e r;
+  if r' == 0 then Nothing else return (Num (l' `div` r'))
+}
+eval e (Lambda i t b) = Nothing --TODO:finish this function
+eval e _ = Nothing
 
 -- Exercise 1: Implementing type ---
 typeof :: TERMLANG -> (Maybe TYPELANG)
@@ -66,8 +94,5 @@ typeof (If c t e) = do {TBool <- typeof c;
                         e' <- typeof e;
                         if t'==e' then return t' else Nothing}
 typeof (Bind i v b) = do {tv <- typeof v;
-					      typeofM ((i,tv):g) b}
+					      typeof ((i,tv):g) b}
 typeof (Id i) = (lookup i g)
-
-
--- Exercise 2: 
