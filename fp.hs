@@ -29,35 +29,76 @@ data TERMLANG = Num  Int
               | Div TERMLANG TERMLANG
                 deriving (Show,Eq)
 
+data VALUELANG where
+  NumV :: Int -> VALUELANG
+  BooleanV :: Bool -> VALUELANG
+  ClosureV :: String -> TERMLANG -> Env -> VALUELANG
+  deriving (Show,Eq)
+
 -- Environment for eval
-type Env = [(String,TERMLANG)]
+type Env = [(String,VALUELANG)]
 -- Environment for typeof
 type Cont = [(String,TYPELANG)]
 
-eval :: Env -> TERMLANG -> (Maybe TERMLANG)
-eval e (Num x) = if x < 0 then Nothing else return (Num x)
+eval :: Env -> TERMLANG -> (Maybe VALUELANG)
+eval e (Num x) = if x < 0 then Nothing else return (NumV x)
 eval e (Plus l r) = do {
-  (Num l') <- eval e l;
-  (Num r') <- eval e r;
-  return (Num (l' + r'))
+  (NumV l') <- eval e l;
+  (NumV r') <- eval e r;
+  return (NumV (l' + r'))
 }
 eval e (Minus l r) = do {
-  (Num l') <- eval e l;
-  (Num r') <- eval e r;
-  if (l' - r') < 0 then Nothing else return (Num (l' + r'))
+  (NumV l') <- eval e l;
+  (NumV r') <- eval e r;
+  if (l' - r') < 0 then Nothing else return (NumV (l' - r'))
 }
 eval e (Mult l r) = do {
-  (Num l') <- eval e l;
-  (Num r') <- eval e r;
-  return (Num (l' * r'))
+  (NumV l') <- eval e l;
+  (NumV r') <- eval e r;
+  return (NumV (l' * r'))
 }
 eval e (Div l r) = do {
-  (Num l') <- eval e l;
-  (Num r') <- eval e r;
-  if r' == 0 then Nothing else return (Num (l' `div` r'))
+  (NumV l') <- eval e l;
+  (NumV r') <- eval e r;
+  if r' == 0 then Nothing else return (NumV (l' `div` r'))
 }
 eval e (Lambda i t b) = Nothing --TODO:finish this function
-eval e _ = Nothing
+
+eval e (Boolean x) = return (BooleanV x)
+eval e (And l r) = do {
+                      (BooleanV l') <- eval e l;
+                      (BooleanV r') <- eval e r;
+                      Just (BooleanV (l' && r'))
+                    }
+eval e (Or l r) = do {
+                      (BooleanV l') <- eval e l;
+                      (BooleanV r') <- eval e r;
+                      Just (BooleanV (l' || r'))
+                    }
+eval e (IsZero x) = do {
+  (NumV x') <- eval e x;
+  if (x' == 0) then Just (BooleanV True) else Just (BooleanV False)
+}
+eval e (Leq l r) = do {
+  (NumV l') <- eval e l;
+  (NumV r') <- eval e r;
+  Just (BooleanV (l' <= r'))
+}
+eval e (If x y z) = do {
+  (BooleanV x') <- eval e x;
+  if (x') then (eval e y) else (eval e z)
+}
+
+eval e (Bind i v b) = do {
+    v' <- eval e v;
+    eval ((i,v'):e) b
+}
+eval e (Id i) = (lookup i e)
+eval e (App f a) = do {
+            (ClosureV i b j) <- eval e f;
+            v <- eval e a;
+            eval ((i,v):j) b
+          }
 
 -- Exercise 1: Implementing type ---
 typeof :: TERMLANG -> (Maybe TYPELANG)
