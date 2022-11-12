@@ -13,7 +13,7 @@ data TYPELANG = TNum
 
 -- AST and Type Definitions
 data TERMLANG = Num  Int 
-	            | Boolean Bool -- True False
+              | Boolean Bool -- True False
               | And TERMLANG TERMLANG
               | Or TERMLANG TERMLANG
               | Leq TERMLANG TERMLANG
@@ -62,8 +62,7 @@ eval e (Div l r) = do {
   (NumV r') <- eval e r;
   if r' == 0 then Nothing else return (NumV (l' `div` r'))
 }
-eval e (Lambda i t b) = Nothing --TODO:finish this function
-
+eval e (Lambda i t b) = return (ClosureV i b e) -- t is the type of the domain, not used in evaluation
 eval e (Boolean x) = return (BooleanV x)
 eval e (And l r) = do {
                       (BooleanV l') <- eval e l;
