@@ -40,6 +40,7 @@ type Env = [(String,VALUELANG)]
 -- Environment for typeof
 type Cont = [(String,TYPELANG)]
 
+--Part 2 - Evaluation
 eval :: Env -> TERMLANG -> (Maybe VALUELANG)
 eval e (Num x) = if x < 0 then Nothing else return (NumV x)
 eval e (Plus l r) = do {
@@ -99,40 +100,9 @@ eval e (App f a) = do {
             eval ((i,v):j) b
           }
 
--- Exercise 1: Implementing type ---
-typeof :: TERMLANG -> (Maybe TYPELANG)
-typeof _ = Nothing
-typeof (Num n) = if n<0 
+-- Part 1 - Type Inference
+typeof :: Cont -> TERMLANG -> (Maybe TYPELANG)
+typeof _ _ = Nothing
+typeof c (Num n) = if n<0 
 					then Nothing 
 					else return TNum
-typeof (Plus l r) = do {TNum <- typeof l;
-						TNum <- typeof r;
-						return TNum}
-typeof (Minus l r) = do {TNum <- typeof l;
-						 TNum <- typeof r;
-						 return TNum}						 
-typeof (Mult l r) = do {TNum <- typeof l;
-						TNum <- typeof r;
-						return TNum}
-typeof (Div l r) = do {TNum <- typeof l;
-					   TNum <- typeof r;
-					   return TNum}
-typeof (Boolean b) = return TBool
-typeof (And l r) = do {TBool <- typeof l;
-					   TBool <- typeof r;
-					   return TBool}						 
-typeof (Or l r) = do {TBool <- typeof l;
-					  TBool <- typeof r;
-					  return TBool}
-typeof (IsZero x) = do {TNum <- typeof x;
-						return TBool	}
-typeof (Leq l r) = do {TNum <- typeof l;
-					   TNum <- typeof r;
-					   return TBool}		
-typeof (If c t e) = do {TBool <- typeof c;
-                        t' <- typeof t;
-                        e' <- typeof e;
-                        if t'==e' then return t' else Nothing}
-typeof (Bind i v b) = do {tv <- typeof v;
-					      typeof ((i,tv):g) b}
-typeof (Id i) = (lookup i g)
