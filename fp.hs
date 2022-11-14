@@ -124,4 +124,23 @@ typeof g (If c t e) = do {TBool <- typeof g c;
                            e' <- typeof g e;
                            if t'==e' then return t' else Nothing}
 typeof g (Lambda i t b) = return (t:->:t)
-typeof _ _ = Nothing
+typeof g (App f a) = do { d :->: r <- typeof g f;
+                          a' <- typeof g a;
+                          if d == a' then return a'
+                          else Nothing}
+                          
+typeof g (Bind i v b) = do {v' <- typeof g v;
+                            typeof ((i,v'):g) b}
+typeof g (Id i) = lookup i g
+typeof g (Plus l r) = do { TNum <- typeof g l;
+                          TNum <- typeof g r;
+                          return TNum}
+typeof g (Minus l r) = do { TNum <- typeof g l;
+                          TNum <- typeof g r;
+                          return TNum}
+typeof g (Mult l r) = do { TNum <- typeof g l;
+                          TNum <- typeof g r;
+                          return TNum}
+typeof g (Div l r) = do { TNum <- typeof g l;
+                          TNum <- typeof g r;
+                          return TNum}
