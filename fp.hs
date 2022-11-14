@@ -12,17 +12,17 @@ data TYPELANG = TNum
                 deriving (Show,Eq)
 
 -- AST and Type Definitions
-data TERMLANG = Num  Int 
+data TERMLANG = Num  Int
               | Boolean Bool -- True False
               | And TERMLANG TERMLANG
               | Or TERMLANG TERMLANG
               | Leq TERMLANG TERMLANG
-              | IsZero TERMLANG 
+              | IsZero TERMLANG
               | If TERMLANG TERMLANG TERMLANG
               | Lambda String TYPELANG TERMLANG
               | App TERMLANG TERMLANG
               | Bind String TERMLANG TERMLANG
-              | Id String 
+              | Id String
               | Plus TERMLANG TERMLANG
               | Minus TERMLANG TERMLANG
               | Mult TERMLANG TERMLANG
@@ -100,9 +100,28 @@ eval e (App f a) = do {
             eval ((i,v):j) b
           }
 
+
 -- Part 1 - Type Inference
+-- typeof [("x", TNum)] (Num 3)
 typeof :: Cont -> TERMLANG -> (Maybe TYPELANG)
-typeof _ _ = Nothing
-typeof c (Num n) = if n<0 
-					then Nothing 
+typeof g (Num n) = if n<0
+					then Nothing
 					else return TNum
+typeof g (Boolean b) = return TBool
+typeof g (And l r) = do { TBool <- typeof g l;
+		 				  TBool <- typeof g r;
+		 				  return TBool}
+typeof g (Or l r) = do { TBool <- typeof g l;
+		 				 TBool <- typeof g r;
+		 				 return TBool}
+typeof g (Leq l r) = do { TNum <- typeof g l;
+		 				  TNum <- typeof g r;
+		 				  return TBool}
+typeof g (IsZero x) = do {TNum <- typeof g x;
+		 				   return TBool	}
+typeof g (If c t e) = do {TBool <- typeof g c;
+                           t' <- typeof g t;
+                           e' <- typeof g e;
+                           if t'==e' then return t' else Nothing}
+typeof g (Lambda i t b) = return (t:->:t)
+typeof _ _ = Nothing
