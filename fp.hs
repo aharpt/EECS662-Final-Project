@@ -123,7 +123,8 @@ typeof g (If c t e) = do {TBool <- typeof g c;
                            t' <- typeof g t;
                            e' <- typeof g e;
                            if t'==e' then return t' else Nothing}
-typeof g (Lambda i t b) = return (t:->:t)
+typeof g (Lambda i d b) = do { r <- (typeof ((i, d):g) b);
+							   return (d:->:r)}
 typeof g (App f a) = do { d :->: r <- typeof g f;
                           a' <- typeof g a;
                           if d == a' then return a'
