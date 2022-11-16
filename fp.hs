@@ -9,6 +9,8 @@ import Control.Monad
 data TYPELANG = TNum
               | TBool
               | TYPELANG :->: TYPELANG --type for functions
+              | TLoc
+              | TTop
                 deriving (Show,Eq)
 
 -- AST and Type Definitions
@@ -27,18 +29,27 @@ data TERMLANG = Num  Int
               | Minus TERMLANG TERMLANG
               | Mult TERMLANG TERMLANG
               | Div TERMLANG TERMLANG
+              | New TERMLANG
+              | Set TERMLANG TERMLANG
+              | Deref TERMLANG
                 deriving (Show,Eq)
 
 data VALUELANG where
   NumV :: Int -> VALUELANG
   BooleanV :: Bool -> VALUELANG
   ClosureV :: String -> TERMLANG -> Env -> VALUELANG
+  LocV :: Int -> VALUELANG
   deriving (Show,Eq)
 
 -- Environment for eval
 type Env = [(String,VALUELANG)]
 -- Environment for typeof
 type Cont = [(String,TYPELANG)]
+
+-- types for store
+type Loc = Int
+type StoreFunc = Loc -> Maybe VALUELANG
+type Store = (Loc, StoreFunc)
 
 --Part 2 - Evaluation
 eval :: Env -> TERMLANG -> (Maybe VALUELANG)
@@ -99,6 +110,7 @@ eval e (App f a) = do {
             v <- eval e a;
             eval ((i,v):j) b
           }
+eval e _ = Nothing
 
 
 -- Part 1 - Type Inference
@@ -145,3 +157,4 @@ typeof g (Mult l r) = do { TNum <- typeof g l;
 typeof g (Div l r) = do { TNum <- typeof g l;
                           TNum <- typeof g r;
                           return TNum}
+typeof g _ = Nothing
