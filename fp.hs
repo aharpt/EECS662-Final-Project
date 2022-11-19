@@ -39,6 +39,7 @@ data VALUELANG where
   BooleanV :: Bool -> VALUELANG
   ClosureV :: String -> TERMLANG -> Env -> VALUELANG
   LocV :: Int -> VALUELANG
+  TopV :: VALUELANG -> VALUELANG
   deriving (Show,Eq)
 
 -- Environment for eval
@@ -51,110 +52,121 @@ type Loc = Int
 type StoreFunc = Loc -> Maybe VALUELANG
 type Store = (Loc, StoreFunc)
 
+-- Initialize the store
+initialize :: StoreFunc
+initialize x = Nothing
+
+initializeStore :: Store
+initializeStore = (0, initialize)
+
 --Part 2 - Evaluation
-eval :: Env -> TERMLANG -> (Maybe VALUELANG)
-eval e (Num x) = if x < 0 then Nothing else return (NumV x)
-eval e (Plus l r) = do {
-  (NumV l') <- eval e l;
-  (NumV r') <- eval e r;
-  return (NumV (l' + r'))
+eval :: Env -> Store -> TERMLANG -> Maybe (Store, VALUELANG)
+eval e store (Num x) = if x < 0 then Nothing else return (store, (NumV x))
+eval e store (Plus l r) = do {
+  (store', (NumV l')) <- eval e store l;
+  (store'', (NumV r')) <- eval e store' r;
+  return (store'', (NumV (l' + r')))
 }
-eval e (Minus l r) = do {
-  (NumV l') <- eval e l;
-  (NumV r') <- eval e r;
-  if (l' - r') < 0 then Nothing else return (NumV (l' - r'))
+eval e store (Minus l r) = do {
+  (store', (NumV l')) <- eval e store l;
+  (store'', (NumV r')) <- eval e store' r;
+  if (l' - r') < 0 then Nothing else return (store'', (NumV (l' - r')))
 }
-eval e (Mult l r) = do {
-  (NumV l') <- eval e l;
-  (NumV r') <- eval e r;
-  return (NumV (l' * r'))
+eval e store (Mult l r) = do {
+  (store', (NumV l')) <- eval e store l;
+  (store'', (NumV r')) <- eval e store' r;
+  return (store'', (NumV (l' * r')))
 }
-eval e (Div l r) = do {
-  (NumV l') <- eval e l;
-  (NumV r') <- eval e r;
-  if r' == 0 then Nothing else return (NumV (l' `div` r'))
+eval e store (Div l r) = do {
+  (store', (NumV l')) <- eval e store l;
+  (store'', (NumV r')) <- eval e store' r;
+  if r' == 0 then Nothing else return (store'', (NumV (l' `div` r')))
 }
-eval e (Lambda i t b) = return (ClosureV i b e) -- t is the type of the domain, not used in evaluation
-eval e (Boolean x) = return (BooleanV x)
-eval e (And l r) = do {
-                      (BooleanV l') <- eval e l;
-                      (BooleanV r') <- eval e r;
-                      Just (BooleanV (l' && r'))
+eval e store (Lambda i t b) = return (store, (ClosureV i b e)) -- t is the type of the domain, not used in evaluation
+eval e store (Boolean x) = return (store, (BooleanV x))
+eval e store (And l r) = do {
+                      (store', (BooleanV l')) <- eval e store l;
+                      (store'', (BooleanV r')) <- eval e store' r;
+                      return (store'', (BooleanV (l' && r')))
                     }
-eval e (Or l r) = do {
-                      (BooleanV l') <- eval e l;
-                      (BooleanV r') <- eval e r;
-                      Just (BooleanV (l' || r'))
+eval e store (Or l r) = do {
+                      (store', (BooleanV l')) <- eval e store l;
+                      (store'', (BooleanV r')) <- eval e store' r;
+                      return (store'', (BooleanV (l' || r')))
                     }
-eval e (IsZero x) = do {
-  (NumV x') <- eval e x;
-  if (x' == 0) then Just (BooleanV True) else Just (BooleanV False)
+eval e store (IsZero x) = do {
+  (store', (NumV x')) <- eval e store x;
+  if (x' == 0) then return (store', (BooleanV True)) else return (store', (BooleanV False))
 }
-eval e (Leq l r) = do {
-  (NumV l') <- eval e l;
-  (NumV r') <- eval e r;
-  Just (BooleanV (l' <= r'))
+eval e store (Leq l r) = do {
+  (store', (NumV l')) <- eval e store l;
+  (store'', (NumV r')) <- eval e store' r;
+  return (store'', (BooleanV (l' <= r')))
 }
-eval e (If x y z) = do {
-  (BooleanV x') <- eval e x;
-  if (x') then (eval e y) else (eval e z)
+eval e store (If x y z) = do {
+  (store', (BooleanV x')) <- eval e store x;
+  if (x') then (eval e store' y) else (eval e store' z)
 }
 
-eval e (Bind i v b) = do {
-    v' <- eval e v;
-    eval ((i,v'):e) b
+eval e store (Bind i v b) = do {
+    (store', v') <- eval e store v;
+    eval ((i,v'):e) store' b
 }
-eval e (Id i) = (lookup i e)
-eval e (App f a) = do {
-            (ClosureV i b j) <- eval e f;
-            v <- eval e a;
-            eval ((i,v):j) b
+-- eval e store (Id i) = if (lookup i e == Nothing) then Nothing else return (store, (lookup i e))
+eval e store (Id i) = do {
+  (TopV t) <- lookup i e;
+  return (store, t)
+}
+eval e store (App f a) = do {
+            (store', (ClosureV i b j)) <- eval e store f;
+            (store'', v) <- eval e store' a;
+            eval ((i,v):j) store'' b
           }
-eval e _ = Nothing
+eval e store _ = Nothing
 
 
 -- Part 1 - Type Inference
 -- typeof [("x", TNum)] (Num 3)
 typeof :: Cont -> TERMLANG -> (Maybe TYPELANG)
 typeof g (Num n) = if n<0
-					then Nothing
-					else return TNum
+        then Nothing
+        else return TNum
 typeof g (Boolean b) = return TBool
 typeof g (And l r) = do { TBool <- typeof g l;
-		 				  TBool <- typeof g r;
-		 				  return TBool}
+        TBool <- typeof g r;
+        return TBool}
 typeof g (Or l r) = do { TBool <- typeof g l;
-		 				 TBool <- typeof g r;
-		 				 return TBool}
+            TBool <- typeof g r;
+            return TBool}
 typeof g (Leq l r) = do { TNum <- typeof g l;
-		 				  TNum <- typeof g r;
-		 				  return TBool}
+            TNum <- typeof g r;
+            return TBool}
 typeof g (IsZero x) = do {TNum <- typeof g x;
-		 				   return TBool	}
+            return TBool}
 typeof g (If c t e) = do {TBool <- typeof g c;
-                           t' <- typeof g t;
-                           e' <- typeof g e;
-                           if t'==e' then return t' else Nothing}
+            t' <- typeof g t;
+            e' <- typeof g e;
+            if t'==e' then return t' else Nothing}
 typeof g (Lambda i d b) = do { r <- (typeof ((i, d):g) b);
-							   return (d:->:r)}
+            return (d:->:r)}
 typeof g (App f a) = do { d :->: r <- typeof g f;
-                          a' <- typeof g a;
-                          if d == a' then return a'
-                          else Nothing}
+            a' <- typeof g a;
+            if d == a' then return a'
+            else Nothing}
                           
 typeof g (Bind i v b) = do {v' <- typeof g v;
-                            typeof ((i,v'):g) b}
+            typeof ((i,v'):g) b}
 typeof g (Id i) = lookup i g
 typeof g (Plus l r) = do { TNum <- typeof g l;
-                          TNum <- typeof g r;
-                          return TNum}
+            TNum <- typeof g r;
+            return TNum}
 typeof g (Minus l r) = do { TNum <- typeof g l;
-                          TNum <- typeof g r;
-                          return TNum}
+            TNum <- typeof g r;
+            return TNum}
 typeof g (Mult l r) = do { TNum <- typeof g l;
-                          TNum <- typeof g r;
-                          return TNum}
+            TNum <- typeof g r;
+            return TNum}
 typeof g (Div l r) = do { TNum <- typeof g l;
-                          TNum <- typeof g r;
-                          return TNum}
+            TNum <- typeof g r;
+            return TNum}
 typeof g _ = Nothing
