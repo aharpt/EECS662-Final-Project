@@ -59,6 +59,14 @@ initialize x = Nothing
 initializeStore :: Store
 initializeStore = (0, initialize)
 
+-- needed for newStore
+set :: StoreFunc -> Loc -> VALUELANG -> StoreFunc
+set s l v = \m -> if m==l then (Just v) else (s)(m)
+
+-- function to help with new function in eval
+newStore :: Store -> VALUELANG -> Store
+newStore (i,s) v = ((i+1), set s i v)
+
 --Part 2 - Evaluation
 eval :: Env -> Store -> TERMLANG -> Maybe (Store, VALUELANG)
 eval e store (Num x) = if x < 0 then Nothing else return (store, (NumV x))
@@ -122,6 +130,10 @@ eval e store (App f a) = do {
             (store'', v) <- eval e store' a;
             eval ((i,v):j) store'' b
           }
+eval e store (New t) = do{
+  ((l, tstore), v) <- eval e store t;
+  return ((newStore (l, tstore) v), (LocV l))
+}
 eval e store _ = Nothing
 
 
@@ -169,4 +181,8 @@ typeof g (Mult l r) = do { TNum <- typeof g l;
 typeof g (Div l r) = do { TNum <- typeof g l;
             TNum <- typeof g r;
             return TNum}
+typeof g (New t) = do{
+  TLoc <- typeof g t;
+  return TLoc
+}
 typeof g _ = Nothing
