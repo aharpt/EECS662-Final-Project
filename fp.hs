@@ -33,6 +33,7 @@ data TERMLANG = Num  Int
               | New TERMLANG
               | Set TERMLANG TERMLANG
               | Deref TERMLANG
+              | Seq TERMLANG TERMLANG
                 deriving (Show,Eq)
 
 data VALUELANG where
@@ -143,6 +144,10 @@ eval e store (Set l v) = do{
             (store'', v') <- eval e store' v;
             return ((setStore store'' l' v'), v')
           }
+eval e store (Seq l r) = do{
+  (store', _) <- eval e store l;
+  eval e store' r
+}
 eval e store _ = Nothing
 
 
@@ -197,5 +202,8 @@ typeof g (New t) = do{
 typeof g (Set l v) = do {
   TLoc <- typeof g l;
   typeof g v
+}
+typeof g (Seq l r) = do {
+  typeof g r;
 }
 typeof g _ = Nothing
