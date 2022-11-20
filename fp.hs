@@ -4,6 +4,7 @@
 -- Imports for Monads
 
 import Control.Monad
+import Text.Show.Functions
 
 -- Definitions for types
 data TYPELANG = TNum
@@ -67,6 +68,10 @@ set s l v = \m -> if m==l then (Just v) else (s)(m)
 newStore :: Store -> VALUELANG -> Store
 newStore (i,s) v = ((i+1), set s i v)
 
+-- setStore function
+setStore :: Store -> Loc -> VALUELANG -> Store
+setStore (i,s) l v = (i,(set s l v))
+
 --Part 2 - Evaluation
 eval :: Env -> Store -> TERMLANG -> Maybe (Store, VALUELANG)
 eval e store (Num x) = if x < 0 then Nothing else return (store, (NumV x))
@@ -120,7 +125,6 @@ eval e store (Bind i v b) = do {
     (store', v') <- eval e store v;
     eval ((i,v'):e) store' b
 }
--- eval e store (Id i) = if (lookup i e == Nothing) then Nothing else return (store, (lookup i e))
 eval e store (Id i) = do {
   (TopV t) <- lookup i e;
   return (store, t)
@@ -134,6 +138,11 @@ eval e store (New t) = do{
   ((l, tstore), v) <- eval e store t;
   return ((newStore (l, tstore) v), (LocV l))
 }
+eval e store (Set l v) = do{
+            (store', (LocV l')) <- eval e store l;
+            (store'', v') <- eval e store' v;
+            return ((setStore store'' l' v'), v')
+          }
 eval e store _ = Nothing
 
 
@@ -184,5 +193,9 @@ typeof g (Div l r) = do { TNum <- typeof g l;
 typeof g (New t) = do{
   TLoc <- typeof g t;
   return TLoc
+}
+typeof g (Set l v) = do {
+  TLoc <- typeof g l;
+  typeof g v
 }
 typeof g _ = Nothing
