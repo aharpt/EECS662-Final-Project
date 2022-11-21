@@ -34,6 +34,7 @@ data TERMLANG = Num  Int
               | Set TERMLANG TERMLANG
               | Deref TERMLANG
               | Seq TERMLANG TERMLANG
+			  | Fix TERMLANG
                 deriving (Show,Eq)
 
 data VALUELANG where
@@ -43,6 +44,12 @@ data VALUELANG where
   LocV :: Int -> VALUELANG
   TopV :: VALUELANG -> VALUELANG
   deriving (Show,Eq)
+
+-- Add recursion to your language by adding a fix operator to the base language. 
+-- Remember to update your abstract syntax, type inference method, 
+-- and evaluator to support this new functionality.
+
+
 
 -- Environment for eval
 type Env = [(String,VALUELANG)]
@@ -72,6 +79,13 @@ newStore (i,s) v = ((i+1), set s i v)
 -- setStore function
 setStore :: Store -> Loc -> VALUELANG -> Store
 setStore (i,s) l v = (i,(set s l v))
+
+
+--helper function for fix
+-- subst :: String -> TERMLANG -> TERMLANG -> TERMLANG
+-- subst i v (Num x) = (Num x) 
+-- -- subst i v (Lambda i b) =
+-- subst i v _ = Nothing
 
 --Part 2 - Evaluation
 eval :: Env -> Store -> TERMLANG -> Maybe (Store, VALUELANG)
@@ -148,6 +162,11 @@ eval e store (Seq l r) = do{
   (store', _) <- eval e store l;
   eval e store' r
 }
+eval e store (Fix f) = Nothing
+-- do { (store', ClosureV i b e) <- (eval e store f);
+						     -- eval e (subst i (Fix (Lambda i b)) b)
+-- }
+
 eval e store _ = Nothing
 
 
@@ -206,4 +225,6 @@ typeof g (Set l v) = do {
 typeof g (Seq l r) = do {
   typeof g r;
 }
+typeof g (Fix f) = do { (d :->: r) <- typeof g f ;
+                        return r }
 typeof g _ = Nothing
