@@ -167,7 +167,17 @@ eval e store (Fix f) = Nothing
 						     -- eval e (subst i (Fix (Lambda i b)) b)
 -- }
 
-eval e store _ = Nothing
+eval e store (Deref l) = do {(store', LocV l') <- eval e store l;
+							v <- derefStore store' l';
+							return (store', v)};
+
+
+deref :: StoreFunc -> Loc -> Maybe VALUELANG
+deref s l = (s)(l)
+
+derefStore :: Store -> Int -> Maybe VALUELANG
+derefStore (i,s) l = deref s l
+
 
 
 -- Part 1 - Type Inference
@@ -221,6 +231,11 @@ typeof g (New t) = do{
 typeof g (Set l v) = do {
   TLoc <- typeof g l;
   typeof g v
+}
+
+typeof g (Deref t) = do {
+  TLoc <- typeof g t;
+  return TLoc
 }
 typeof g (Seq l r) = do {
   typeof g r;
