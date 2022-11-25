@@ -232,6 +232,11 @@ typeof g (Set l v) = do {
   TLoc <- typeof g l;
   typeof g v
 }
+
+typeof g (Deref t) = do {
+  TLoc <- typeof g t;
+  return TLoc
+}
 typeof g (Seq l r) = do {
   typeof g r;
 }
