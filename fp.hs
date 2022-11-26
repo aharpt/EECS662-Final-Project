@@ -34,6 +34,7 @@ data TERMLANG = Num  Int
               | Set TERMLANG TERMLANG
               | Deref TERMLANG
               | Seq TERMLANG TERMLANG
+			  | Fix TERMLANG
                 deriving (Show,Eq)
 
 data VALUELANG where
@@ -99,15 +100,15 @@ eval e store (Div l r) = do {
 eval e store (Lambda i t b) = return (store, (ClosureV i b e)) -- t is the type of the domain, not used in evaluation
 eval e store (Boolean x) = return (store, (BooleanV x))
 eval e store (And l r) = do {
-                      (store', (BooleanV l')) <- eval e store l;
-                      (store'', (BooleanV r')) <- eval e store' r;
-                      return (store'', (BooleanV (l' && r')))
-                    }
+  (store', (BooleanV l')) <- eval e store l;
+  (store'', (BooleanV r')) <- eval e store' r;
+  return (store'', (BooleanV (l' && r')))
+}
 eval e store (Or l r) = do {
-                      (store', (BooleanV l')) <- eval e store l;
-                      (store'', (BooleanV r')) <- eval e store' r;
-                      return (store'', (BooleanV (l' || r')))
-                    }
+  (store', (BooleanV l')) <- eval e store l;
+  (store'', (BooleanV r')) <- eval e store' r;
+  return (store'', (BooleanV (l' || r')))
+}
 eval e store (IsZero x) = do {
   (store', (NumV x')) <- eval e store x;
   if (x' == 0) then return (store', (BooleanV True)) else return (store', (BooleanV False))
@@ -131,22 +132,26 @@ eval e store (Id i) = do {
   return (store, t)
 }
 eval e store (App f a) = do {
-            (store', (ClosureV i b j)) <- eval e store f;
-            (store'', v) <- eval e store' a;
-            eval ((i,v):j) store'' b
-          }
+   (store', (ClosureV i b j)) <- eval e store f;
+   (store'', v) <- eval e store' a;
+   eval ((i,v):j) store'' b
+}
 eval e store (New t) = do{
   ((l, tstore), v) <- eval e store t;
   return ((newStore (l, tstore) v), (LocV l))
 }
 eval e store (Set l v) = do{
-            (store', (LocV l')) <- eval e store l;
-            (store'', v') <- eval e store' v;
-            return ((setStore store'' l' v'), v')
-          }
+   (store', (LocV l')) <- eval e store l;
+   (store'', v') <- eval e store' v;
+   return ((setStore store'' l' v'), v')
+}
 eval e store (Seq l r) = do{
   (store', _) <- eval e store l;
   eval e store' r
+}
+eval e store (Fix f) = do { 
+	(store', ClosureV i b e) <- (eval e store f);
+   	 Nothing -- eval e (subst i (Fix (Lambda i b)) b)
 }
 eval e store _ = Nothing
 
@@ -154,47 +159,69 @@ eval e store _ = Nothing
 -- Part 1 - Type Inference
 -- typeof [("x", TNum)] (Num 3)
 typeof :: Cont -> TERMLANG -> (Maybe TYPELANG)
-typeof g (Num n) = if n<0
-        then Nothing
-        else return TNum
+typeof g (Num n) = if n<0 then Nothing else return TNum
 typeof g (Boolean b) = return TBool
-typeof g (And l r) = do { TBool <- typeof g l;
-        TBool <- typeof g r;
-        return TBool}
-typeof g (Or l r) = do { TBool <- typeof g l;
-            TBool <- typeof g r;
-            return TBool}
-typeof g (Leq l r) = do { TNum <- typeof g l;
-            TNum <- typeof g r;
-            return TBool}
-typeof g (IsZero x) = do {TNum <- typeof g x;
-            return TBool}
-typeof g (If c t e) = do {TBool <- typeof g c;
-            t' <- typeof g t;
-            e' <- typeof g e;
-            if t'==e' then return t' else Nothing}
-typeof g (Lambda i d b) = do { r <- (typeof ((i, d):g) b);
-            return (d:->:r)}
-typeof g (App f a) = do { d :->: r <- typeof g f;
-            a' <- typeof g a;
-            if d == a' then return a'
-            else Nothing}
+typeof g (And l r) = do { 
+    TBool <- typeof g l;
+    TBool <- typeof g r;
+    return TBool
+}
+typeof g (Or l r) = do { 
+   TBool <- typeof g l;
+   TBool <- typeof g r;
+   return TBool
+}
+typeof g (Leq l r) = do { 
+   TNum <- typeof g l;
+   TNum <- typeof g r;
+   return TBool
+}
+typeof g (IsZero x) = do {
+   TNum <- typeof g x;
+   return TBool
+}
+typeof g (If c t e) = do {
+   TBool <- typeof g c;
+   t' <- typeof g t;
+   e' <- typeof g e;
+   if t'==e' then return t' else Nothing
+}
+typeof g (Lambda i d b) = do { 
+    r <- (typeof ((i, d):g) b);
+    return (d:->:r)
+}
+typeof g (App f a) = do { 
+   d :->: r <- typeof g f;
+   a' <- typeof g a;
+   if d == a' then return a'
+   else Nothing
+}
                           
-typeof g (Bind i v b) = do {v' <- typeof g v;
-            typeof ((i,v'):g) b}
+typeof g (Bind i v b) = do {
+    v' <- typeof g v;
+    typeof ((i,v'):g) b
+}
 typeof g (Id i) = lookup i g
-typeof g (Plus l r) = do { TNum <- typeof g l;
-            TNum <- typeof g r;
-            return TNum}
-typeof g (Minus l r) = do { TNum <- typeof g l;
-            TNum <- typeof g r;
-            return TNum}
-typeof g (Mult l r) = do { TNum <- typeof g l;
-            TNum <- typeof g r;
-            return TNum}
-typeof g (Div l r) = do { TNum <- typeof g l;
-            TNum <- typeof g r;
-            return TNum}
+typeof g (Plus l r) = do { 
+    TNum <- typeof g l;
+    TNum <- typeof g r;
+    return TNum
+}
+typeof g (Minus l r) = do { 
+    TNum <- typeof g l;
+    TNum <- typeof g r;
+    return TNum
+}
+typeof g (Mult l r) = do { 
+    TNum <- typeof g l;
+    TNum <- typeof g r;
+    return TNum
+}
+typeof g (Div l r) = do { 
+    TNum <- typeof g l;
+    TNum <- typeof g r;
+    return TNum
+}
 typeof g (New t) = do{
   TLoc <- typeof g t;
   return TLoc
@@ -205,5 +232,9 @@ typeof g (Set l v) = do {
 }
 typeof g (Seq l r) = do {
   typeof g r;
+}
+typeof g (Fix f) = do { 
+  (d :->: r) <- typeof g f ;
+  return r 
 }
 typeof g _ = Nothing
