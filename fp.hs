@@ -45,6 +45,7 @@ data VALUELANG where
   TopV :: VALUELANG -> VALUELANG
   deriving (Show,Eq)
 
+
 -- Environment for eval
 type Env = [(String,VALUELANG)]
 -- Environment for typeof
@@ -73,6 +74,15 @@ newStore (i,s) v = ((i+1), set s i v)
 -- setStore function
 setStore :: Store -> Loc -> VALUELANG -> Store
 setStore (i,s) l v = (i,(set s l v))
+
+-- deref function
+deref :: StoreFunc -> Loc -> Maybe VALUELANG
+deref s l = (s)(l)
+
+derefStore :: Store -> Int -> Maybe VALUELANG
+derefStore (i,s) l = deref s l
+
+
 
 --Part 2 - Evaluation
 eval :: Env -> Store -> TERMLANG -> Maybe (Store, VALUELANG)
@@ -145,6 +155,11 @@ eval e store (Set l v) = do{
    (store'', v') <- eval e store' v;
    return ((setStore store'' l' v'), v')
 }
+eval e store (Deref l) = do {
+   (store', LocV l') <- eval e store l;
+   v <- derefStore store' l';
+   return (store', v)
+}
 eval e store (Seq l r) = do{
   (store', _) <- eval e store l;
   eval e store' r
@@ -154,6 +169,7 @@ eval e store (Fix f) = do {
    	 Nothing -- eval e (subst i (Fix (Lambda i b)) b)
 }
 eval e store _ = Nothing
+
 
 
 -- Part 1 - Type Inference
@@ -195,8 +211,7 @@ typeof g (App f a) = do {
    a' <- typeof g a;
    if d == a' then return a'
    else Nothing
-}
-                          
+}                       
 typeof g (Bind i v b) = do {
     v' <- typeof g v;
     typeof ((i,v'):g) b
@@ -230,6 +245,10 @@ typeof g (Set l v) = do {
   TLoc <- typeof g l;
   typeof g v
 }
+typeof g (Deref t) = do {
+  TLoc <- typeof g t;
+  return TLoc
+}
 typeof g (Seq l r) = do {
   typeof g r;
 }
@@ -238,3 +257,4 @@ typeof g (Fix f) = do {
   return r 
 }
 typeof g _ = Nothing
+
