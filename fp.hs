@@ -58,7 +58,7 @@ data TERMLANGX = NumX Int
               | DerefX TERMLANGX
               | SeqX TERMLANGX TERMLANGX
               | FixX TERMLANGX
-              | AssignX TERMLANGX String TERMLANGX
+              | AssignX TERMLANGX TERMLANGX
                 deriving (Show,Eq)
 
 data VALUELANG where
@@ -304,5 +304,4 @@ elab (SetX l v) = (Set (elab l) (elab v))
 elab (DerefX l) = (Deref (elab l))
 elab (SeqX l r) = (Seq (elab l) (elab r))
 elab (FixX f) = (Fix (elab f))
-elab (AssignX l ":=" r) = (Seq (Set (elab l) (elab r)) (Deref (elab l)))
-elab _ = (Num (-1)) --returning something that will error
+elab (AssignX l r) = (Set (elab l) (elab r))
