@@ -15,7 +15,7 @@ data TYPELANG = TNum
                 deriving (Show,Eq)
 
 -- AST and Type Definitions
-data TERMLANG = Num  Int
+data TERMLANG = Num Int
               | Boolean Bool -- True False
               | And TERMLANG TERMLANG
               | Or TERMLANG TERMLANG
@@ -34,7 +34,31 @@ data TERMLANG = Num  Int
               | Set TERMLANG TERMLANG
               | Deref TERMLANG
               | Seq TERMLANG TERMLANG
-			  | Fix TERMLANG
+              | Fix TERMLANG
+                deriving (Show,Eq)
+
+-- AST and Type Definitions
+data TERMLANGX = NumX Int
+              | BooleanX Bool -- True False
+              | AndX TERMLANGX TERMLANGX
+              | OrX TERMLANGX TERMLANGX
+              | LeqX TERMLANGX TERMLANGX
+              | IsZeroX TERMLANGX
+              | IfX TERMLANGX TERMLANGX TERMLANGX
+              | LambdaX String TYPELANG TERMLANGX
+              | AppX TERMLANGX TERMLANGX
+              | BindX String TERMLANGX TERMLANGX
+              | IdX String
+              | PlusX TERMLANGX TERMLANGX
+              | MinusX TERMLANGX TERMLANGX
+              | MultX TERMLANGX TERMLANGX
+              | DivX TERMLANGX TERMLANGX
+              | NewX TERMLANGX
+              | SetX TERMLANGX TERMLANGX
+              | DerefX TERMLANGX
+              | SeqX TERMLANGX TERMLANGX
+              | FixX TERMLANGX
+              | AssignX TERMLANGX TERMLANGX
                 deriving (Show,Eq)
 
 data VALUELANG where
@@ -165,10 +189,10 @@ eval e store (Seq l r) = do{
   eval e store' r
 }
 eval e store (Fix f) = do { 
-	(store', ClosureV i b e) <- (eval e store f);
-   	 Nothing -- eval e (subst i (Fix (Lambda i b)) b)
+  (store', ClosureV i b e) <- (eval e store f);
+  Nothing -- eval e (subst i (Fix (Lambda i b)) b)
 }
-eval e store _ = Nothing
+--eval e store _ = Nothing
 
 
 
@@ -256,5 +280,28 @@ typeof g (Fix f) = do {
   (d :->: r) <- typeof g f ;
   return r 
 }
-typeof g _ = Nothing
+--typeof g _ = Nothing
 
+-- Elaborator
+elab :: TERMLANGX -> TERMLANG
+elab (NumX x) = (Num x)
+elab (PlusX l r) = (Plus (elab l) (elab r))
+elab (MinusX l r) = (Minus (elab l) (elab r))
+elab (MultX l r) = (Mult (elab l) (elab r))
+elab (DivX l r) = (Div (elab l) (elab r))
+elab (LambdaX i t b) = (Lambda i t (elab b))
+elab (BooleanX x) = (Boolean x)
+elab (AndX l r) = (And (elab l) (elab r))
+elab (OrX l r) = (Or (elab l) (elab r))
+elab (IsZeroX x) = (IsZero (elab x))
+elab (LeqX l r) = (Leq (elab l) (elab r))
+elab (IfX x y z) = (If (elab x) (elab y) (elab z))
+elab (BindX i v b) = (Bind i (elab v) (elab b))
+elab (IdX i) = (Id i)
+elab (AppX f a) = (App (elab f) (elab a))
+elab (NewX t) = (New (elab t))
+elab (SetX l v) = (Set (elab l) (elab v))
+elab (DerefX l) = (Deref (elab l))
+elab (SeqX l r) = (Seq (elab l) (elab r))
+elab (FixX f) = (Fix (elab f))
+elab (AssignX l r) = (Set (elab l) (elab r))
