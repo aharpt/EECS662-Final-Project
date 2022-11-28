@@ -106,7 +106,31 @@ deref s l = (s)(l)
 derefStore :: Store -> Int -> Maybe VALUELANG
 derefStore (i,s) l = deref s l
 
-
+-- subst function for fix 
+subst :: String -> TERMLANG -> TERMLANG -> TERMLANG
+subst i v (Num x) = (Num x) 
+subst i v (Plus l r) = (Plus (subst i v l) (subst i v r))
+subst i v (Minus l r) = (Minus (subst i v l) (subst i v r))
+subst i v (Mult l r) = (Mult (subst i v l) (subst i v r))
+subst i v (Div l r) = (Div (subst i v l) (subst i v r))
+subst i v (Boolean b) = (Boolean b)
+subst i v (And l r) = (And (subst i v l) (subst i v r))
+subst i v (Or l r) = (Or (subst i v l) (subst i v r))
+subst i v (Leq l r) = (Leq (subst i v l) (subst i v r))
+subst i v (IsZero x) = IsZero (subst i v x)
+subst i v (If c t e) = (If (subst i v c) (subst i v t) (subst i v e))
+subst i v (Id i') = if i==i' 
+					then v 
+					else (Id i')
+subst i v (Bind i' v' b') = if i==i'
+							then (Bind i' (subst i v v') b')
+							else (Bind i' (subst i v v') (subst i v b'))
+subst i v (Fix f) = (Fix (subst i v f))
+subst i v (Lambda i' ty b) = if i==i' 
+							 then (Lambda i ty (subst i v b))
+							 else (Lambda i' ty (subst i' b b))
+subst i v (App f a) = (App (subst i v f) (subst i v a))
+subst i v _ = (Num 5) -- need implement: new, deref, set 
 
 --Part 2 - Evaluation
 eval :: Env -> Store -> TERMLANG -> Maybe (Store, VALUELANG)
@@ -190,7 +214,7 @@ eval e store (Seq l r) = do{
 }
 eval e store (Fix f) = do { 
   (store', ClosureV i b e) <- (eval e store f);
-  Nothing -- eval e (subst i (Fix (Lambda i b)) b)
+   eval e store (subst i (Fix (Lambda i TNum b)) b)
 }
 --eval e store _ = Nothing
 
