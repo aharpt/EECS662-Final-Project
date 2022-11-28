@@ -106,9 +106,9 @@ deref s l = (s)(l)
 derefStore :: Store -> Int -> Maybe VALUELANG
 derefStore (i,s) l = deref s l
 
--- subst function for fix 
+-- subst function for fix
 subst :: String -> TERMLANG -> TERMLANG -> TERMLANG
-subst i v (Num x) = (Num x) 
+subst i v (Num x) = (Num x)
 subst i v (Plus l r) = (Plus (subst i v l) (subst i v r))
 subst i v (Minus l r) = (Minus (subst i v l) (subst i v r))
 subst i v (Mult l r) = (Mult (subst i v l) (subst i v r))
@@ -119,18 +119,16 @@ subst i v (Or l r) = (Or (subst i v l) (subst i v r))
 subst i v (Leq l r) = (Leq (subst i v l) (subst i v r))
 subst i v (IsZero x) = IsZero (subst i v x)
 subst i v (If c t e) = (If (subst i v c) (subst i v t) (subst i v e))
-subst i v (Id i') = if i==i' 
-					then v 
-					else (Id i')
+subst i v (Id i') = if i==i' then v else (Id i')
 subst i v (Bind i' v' b') = if i==i'
-							then (Bind i' (subst i v v') b')
-							else (Bind i' (subst i v v') (subst i v b'))
+                            then (Bind i' (subst i v v') b')
+                            else (Bind i' (subst i v v') (subst i v b'))
 subst i v (Fix f) = (Fix (subst i v f))
-subst i v (Lambda i' ty b) = if i==i' 
-							 then (Lambda i ty (subst i v b))
-							 else (Lambda i' ty (subst i' b b))
+subst i v (Lambda i' ty b) = if i==i'
+                             then (Lambda i ty (subst i v b))
+                             else (Lambda i' ty (subst i b b))
 subst i v (App f a) = (App (subst i v f) (subst i v a))
-subst i v _ = (Num 5) -- need implement: new, deref, set 
+subst i v _ = (Num 5) -- need implement: new, deref, set
 
 --Part 2 - Evaluation
 eval :: Env -> Store -> TERMLANG -> Maybe (Store, VALUELANG)
@@ -212,7 +210,7 @@ eval e store (Seq l r) = do{
   (store', _) <- eval e store l;
   eval e store' r
 }
-eval e store (Fix f) = do { 
+eval e store (Fix f) = do {
   (store', ClosureV i b e) <- (eval e store f);
    eval e store (subst i (Fix (Lambda i TNum b)) b)
 }
@@ -225,17 +223,17 @@ eval e store (Fix f) = do {
 typeof :: Cont -> TERMLANG -> (Maybe TYPELANG)
 typeof g (Num n) = if n<0 then Nothing else return TNum
 typeof g (Boolean b) = return TBool
-typeof g (And l r) = do { 
+typeof g (And l r) = do {
     TBool <- typeof g l;
     TBool <- typeof g r;
     return TBool
 }
-typeof g (Or l r) = do { 
+typeof g (Or l r) = do {
    TBool <- typeof g l;
    TBool <- typeof g r;
    return TBool
 }
-typeof g (Leq l r) = do { 
+typeof g (Leq l r) = do {
    TNum <- typeof g l;
    TNum <- typeof g r;
    return TBool
@@ -250,37 +248,37 @@ typeof g (If c t e) = do {
    e' <- typeof g e;
    if t'==e' then return t' else Nothing
 }
-typeof g (Lambda i d b) = do { 
+typeof g (Lambda i d b) = do {
     r <- (typeof ((i, d):g) b);
     return (d:->:r)
 }
-typeof g (App f a) = do { 
+typeof g (App f a) = do {
    d :->: r <- typeof g f;
    a' <- typeof g a;
    if d == a' then return a'
    else Nothing
-}                       
+}
 typeof g (Bind i v b) = do {
     v' <- typeof g v;
     typeof ((i,v'):g) b
 }
 typeof g (Id i) = lookup i g
-typeof g (Plus l r) = do { 
+typeof g (Plus l r) = do {
     TNum <- typeof g l;
     TNum <- typeof g r;
     return TNum
 }
-typeof g (Minus l r) = do { 
+typeof g (Minus l r) = do {
     TNum <- typeof g l;
     TNum <- typeof g r;
     return TNum
 }
-typeof g (Mult l r) = do { 
+typeof g (Mult l r) = do {
     TNum <- typeof g l;
     TNum <- typeof g r;
     return TNum
 }
-typeof g (Div l r) = do { 
+typeof g (Div l r) = do {
     TNum <- typeof g l;
     TNum <- typeof g r;
     return TNum
@@ -300,9 +298,9 @@ typeof g (Deref t) = do {
 typeof g (Seq l r) = do {
   typeof g r;
 }
-typeof g (Fix f) = do { 
+typeof g (Fix f) = do {
   (d :->: r) <- typeof g f ;
-  return r 
+  return r
 }
 --typeof g _ = Nothing
 
