@@ -128,7 +128,11 @@ subst i v (Lambda i' ty b) = if i==i'
                              then (Lambda i ty (subst i v b))
                              else (Lambda i' ty (subst i b b))
 subst i v (App f a) = (App (subst i v f) (subst i v a))
-subst i v _ = (Num 5) -- need implement: new, deref, set
+subst i v (New t) = (New (subst i v t))
+subst i v (Deref t) = (Deref (subst i v t))
+subst i v (Set l v') = (Set (subst i v l) (subst i v v'))
+subst i v (Seq l r) = (Seq (subst i v l) (subst i v r))
+-- subst i v _ = (Num 5) -- need implement: new, deref, set, seq
 
 --Part 2 - Evaluation
 eval :: Env -> Store -> TERMLANG -> Maybe (Store, VALUELANG)
@@ -178,7 +182,6 @@ eval e store (If x y z) = do {
   (store', (BooleanV x')) <- eval e store x;
   if (x') then (eval e store' y) else (eval e store' z)
 }
-
 eval e store (Bind i v b) = do {
     (store', v') <- eval e store v;
     eval ((i,v'):e) store' b
