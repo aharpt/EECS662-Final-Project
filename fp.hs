@@ -330,3 +330,7 @@ elab (DerefX l) = (Deref (elab l))
 elab (SeqX l r) = (Seq (elab l) (elab r))
 elab (FixX f) = (Fix (elab f))
 elab (AssignX l r) = (Set (elab l) (elab r))
+
+-- Interpretor
+interp :: TERMLANGX -> Maybe (Store, VALUELANG)
+interp x = if (typeof [] (elab x) == Nothing) then Nothing else (eval [] initializeStore (elab x))
