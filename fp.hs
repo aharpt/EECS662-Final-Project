@@ -5,6 +5,7 @@
 
 import Control.Monad
 import Text.Show.Functions
+import Data.Maybe
 
 -- Definitions for types
 data TYPELANG = TNum
@@ -66,7 +67,6 @@ data VALUELANG where
   BooleanV :: Bool -> VALUELANG
   ClosureV :: String -> TERMLANG -> Env -> VALUELANG
   LocV :: Int -> VALUELANG
-  TopV :: VALUELANG -> VALUELANG
   deriving (Show,Eq)
 
 
@@ -187,8 +187,7 @@ eval e store (Bind i v b) = do {
     eval ((i,v'):e) store' b
 }
 eval e store (Id i) = do {
-  (TopV t) <- lookup i e;
-  return (store, t)
+  if (lookup i e == Nothing) then Nothing else Just (store, fromJust (lookup i e))
 }
 eval e store (App f a) = do {
    (store', (ClosureV i b j)) <- eval e store f;
