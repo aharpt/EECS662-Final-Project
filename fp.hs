@@ -216,7 +216,6 @@ eval e store (Fix f) = do {
   (store', ClosureV i b e) <- (eval e store f);
    eval e store (subst i (Fix (Lambda i TNum b)) b)
 }
---eval e store _ = Nothing
 
 
 
@@ -304,7 +303,6 @@ typeof g (Fix f) = do {
   (d :->: r) <- typeof g f ;
   return r
 }
---typeof g _ = Nothing
 
 -- Elaborator
 elab :: TERMLANGX -> TERMLANG
