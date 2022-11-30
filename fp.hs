@@ -254,10 +254,10 @@ typeof g (Lambda i d b) = do {
     return (d:->:r)
 }
 typeof g (App f a) = do {
-  a' <- typeof g a;
-   d :->: r <- typeof g f;
-   if d == a' then return r
-   else Nothing
+    a' <- typeof g a;
+    d :->: r <- typeof g f;
+    if d == a' then return r
+    else Nothing
 }
 typeof g (Bind i v b) = do {
     v' <- typeof g v;
