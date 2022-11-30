@@ -285,16 +285,16 @@ typeof g (Div l r) = do {
     return TNum
 }
 typeof g (New t) = do{
-  TLoc <- typeof g t;
+  typeof g t;
   return TLoc
 }
 typeof g (Set l v) = do {
   TLoc <- typeof g l;
   typeof g v
 }
-typeof g (Deref t) = do {
-  TLoc <- typeof g t;
-  return TLoc
+typeof g (Deref t) = do { 
+  TLoc <- (typeof g t);
+  return TTop
 }
 typeof g (Seq l r) = do {
   typeof g r;
