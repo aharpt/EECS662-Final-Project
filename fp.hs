@@ -125,8 +125,8 @@ subst i v (Bind i' v' b') = if i==i'
                             else (Bind i' (subst i v v') (subst i v b'))
 subst i v (Fix f) = (Fix (subst i v f))
 subst i v (Lambda i' ty b) = if i==i'
-                             then (Lambda i ty (subst i v b))
-                             else (Lambda i' ty (subst i b b))
+                             then (Lambda i' ty b)
+                             else (Lambda i' ty (subst i v b))
 subst i v (App f a) = (App (subst i v f) (subst i v a))
 subst i v (New t) = (New (subst i v t))
 subst i v (Deref t) = (Deref (subst i v t))
@@ -213,8 +213,8 @@ eval e store (Seq l r) = do{
   eval e store' r
 }
 eval e store (Fix f) = do {
-  (store', ClosureV i b e) <- (eval e store f);
-   eval e store (subst i (Fix (Lambda i TNum b)) b)
+  (store', ClosureV i b e') <- (eval e store f);
+   eval e' store' (subst i (Fix (Lambda i TNum b)) b)
 }
 
 
@@ -254,10 +254,10 @@ typeof g (Lambda i d b) = do {
     return (d:->:r)
 }
 typeof g (App f a) = do {
-   d :->: r <- typeof g f;
-   a' <- typeof g a;
-   if d == a' then return a'
-   else Nothing
+    a' <- typeof g a;
+    d :->: r <- typeof g f;
+    if d == a' then return r
+    else Nothing
 }
 typeof g (Bind i v b) = do {
     v' <- typeof g v;
