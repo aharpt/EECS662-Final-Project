@@ -255,9 +255,15 @@ typeof g (Lambda i d b) = do {
 }
 typeof g (App f a) = do {
     a' <- typeof g a;
-    d :->: r <- typeof g f;
-    if d == a' then return r
-    else Nothing
+    if (typeof g f == Just TTop) 
+      then return a'
+      else (
+        do {
+          d :->: r <- typeof g f;
+          if d == a' then return r
+          else Nothing
+        }
+      )
 }
 typeof g (Bind i v b) = do {
     v' <- typeof g v;
