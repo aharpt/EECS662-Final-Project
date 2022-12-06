@@ -55,8 +55,8 @@ data TERMLANGX = NumX Int
               | MultX TERMLANGX TERMLANGX
               | DivX TERMLANGX TERMLANGX
               | NewX TERMLANGX
-              | SetX TERMLANGX TERMLANGX
-              | DerefX TERMLANGX
+              | SetX String TERMLANGX
+              | DerefX String
               | SeqX TERMLANGX TERMLANGX
               | FixX TERMLANGX
               | AssignX String TERMLANGX
@@ -328,8 +328,8 @@ elab (BindX i v b) = (Bind i (elab v) (elab b))
 elab (IdX i) = (Id i)
 elab (AppX f a) = (App (elab f) (elab a))
 elab (NewX t) = (New (elab t))
-elab (SetX l v) = (Set (elab l) (elab v))
-elab (DerefX l) = (Deref (elab l))
+elab (SetX l v) = (Set (Id l) (elab v))
+elab (DerefX l) = (Deref (Id l))
 elab (SeqX l r) = (Seq (elab l) (elab r))
 elab (FixX f) = (Fix (elab f))
 elab (AssignX l r) = (Set (Id l) (elab r))
