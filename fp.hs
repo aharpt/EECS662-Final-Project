@@ -38,7 +38,7 @@ data TERMLANG = Num Int
               | Fix TERMLANG
                 deriving (Show,Eq)
 
--- AST and Type Definitions
+-- Extended Language AST and Type Definitions
 data TERMLANGX = NumX Int
               | BooleanX Bool -- True False
               | AndX TERMLANGX TERMLANGX
@@ -132,7 +132,6 @@ subst i v (New t) = (New (subst i v t))
 subst i v (Deref t) = (Deref (subst i v t))
 subst i v (Set l v') = (Set (subst i v l) (subst i v v'))
 subst i v (Seq l r) = (Seq (subst i v l) (subst i v r))
--- subst i v _ = (Num 5) -- need implement: new, deref, set, seq
 
 --Part 2 - Evaluation
 eval :: Env -> Store -> TERMLANG -> Maybe (Store, VALUELANG)
@@ -214,13 +213,12 @@ eval e store (Seq l r) = do{
 }
 eval e store (Fix f) = do {
   (store', ClosureV i b e') <- (eval e store f);
-   eval e' store' (subst i (Fix (Lambda i TNum b)) b)
+   eval e' store' (subst i (Fix (Lambda i TNum b)) b) -- TNum not used in evaluation
 }
 
 
 
 -- Part 1 - Type Inference
--- typeof [("x", TNum)] (Num 3)
 typeof :: Cont -> TERMLANG -> (Maybe TYPELANG)
 typeof g (Num n) = if n<0 then Nothing else return TNum
 typeof g (Boolean b) = return TBool
